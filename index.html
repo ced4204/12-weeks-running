@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0E1116">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>APEX RUN — 10 KM</title>
+<style>
+:root{
+  --bg:#0E1116; --panel:#161B22; --panel2:#1C232D; --line:#283140;
+  --ink:#E7ECF2; --mut:#8A97A8; --dim:#5B6675;
+  --amber:#FFB020; --amber2:#FF8A3C; --run:#FFB020; --walk:#3DA9FC;
+  --z1:#3DA9FC; --z2:#39D98A; --z3:#FFB020; --z4:#FF6B5B;
+  --ok:#39D98A; --danger:#FF6B5B;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.cond{font-stretch:condensed;letter-spacing:-.02em}
+
+/* ---------- HEADER ---------- */
+header{
+  position:sticky;top:0;z-index:30;
+  background:linear-gradient(180deg,#0E1116 70%,rgba(14,17,22,0));
+  padding:calc(env(safe-area-inset-top) + 14px) 18px 12px;
+}
+.brand{display:flex;align-items:center;gap:11px}
+.dot{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--amber),var(--amber2));
+  display:grid;place-items:center;flex:0 0 auto;box-shadow:0 4px 14px rgba(255,138,60,.3)}
+.dot svg{width:20px;height:20px}
+.brand h1{font-size:18px;font-weight:800;letter-spacing:.14em}
+.brand .sub{font-size:10.5px;color:var(--mut);letter-spacing:.22em;font-weight:600;margin-top:1px}
+
+/* progress bar */
+.pbar{margin-top:14px;height:8px;border-radius:99px;background:var(--panel2);overflow:hidden;position:relative}
+.pbar i{display:block;height:100%;width:0;border-radius:99px;
+  background:linear-gradient(90deg,var(--z1),var(--z2),var(--amber));transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.pmeta{display:flex;justify-content:space-between;margin-top:7px;font-size:11px;color:var(--mut)}
+.pmeta b{color:var(--ink);font-weight:700}
+
+/* ---------- REFERENCE STRIP ---------- */
+.refs{display:flex;gap:9px;padding:4px 18px 0;overflow-x:auto;scrollbar-width:none}
+.refs::-webkit-scrollbar{display:none}
+.ref{flex:0 0 auto;background:var(--panel);border:1px solid var(--line);border-radius:13px;
+  padding:9px 13px;min-width:78px}
+.ref .k{font-size:9.5px;color:var(--dim);letter-spacing:.12em;font-weight:700}
+.ref .v{font-size:19px;font-weight:800;margin-top:1px}
+.ref .v small{font-size:11px;color:var(--mut);font-weight:600}
+
+/* ---------- BLOCKS ---------- */
+main{padding:16px 14px 40px}
+.block{margin-bottom:22px}
+.block-head{display:flex;align-items:flex-start;gap:11px;padding:0 4px 11px}
+.block-no{font-size:30px;font-weight:800;line-height:.9;
+  background:linear-gradient(135deg,var(--amber),var(--amber2));-webkit-background-clip:text;background-clip:text;color:transparent;flex:0 0 auto}
+.block-head .t{font-size:14.5px;font-weight:800;letter-spacing:.01em}
+.block-head .w{font-size:11px;color:var(--mut);font-weight:600;margin-top:2px}
+.block-head .f{font-size:11.5px;color:var(--dim);margin-top:6px;line-height:1.45}
+
+/* week row */
+.week{background:var(--panel);border:1px solid var(--line);border-radius:16px;margin-bottom:10px;overflow:hidden}
+.week.done{border-color:rgba(57,217,138,.35)}
+.week-top{display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer;user-select:none}
+.wno{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--mut);flex:0 0 auto;width:30px}
+.wbars{flex:1;display:flex;gap:5px}
+.session-chip{flex:1;display:flex;align-items:center;gap:7px;background:var(--panel2);border-radius:10px;padding:7px 9px;font-size:11px;min-width:0}
+.session-chip .ic{width:7px;height:7px;border-radius:99px;flex:0 0 auto}
+.session-chip .lbl{color:var(--mut);font-weight:700;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.session-chip.c .lbl{color:var(--ok)}
+.chev{flex:0 0 auto;color:var(--dim);transition:transform .25s}
+.week.open .chev{transform:rotate(90deg)}
+
+.week-body{max-height:0;overflow:hidden;transition:max-height .35s ease}
+.sess{border-top:1px solid var(--line);padding:14px 15px}
+.sess-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
+.sess-name{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800}
+.sess-name .day{font-size:10px;color:var(--dim);letter-spacing:.12em;font-weight:700}
+.tag{font-size:9.5px;font-weight:800;letter-spacing:.08em;padding:3px 8px;border-radius:99px}
+.tag.iv{background:rgba(255,176,32,.15);color:var(--amber)}
+.tag.ef{background:rgba(61,169,252,.15);color:var(--walk)}
+
+.steps{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
+.step{display:flex;align-items:center;gap:11px;font-size:12.5px}
+.step .bar{flex:0 0 auto;width:4px;border-radius:99px;align-self:stretch;min-height:20px}
+.step .body{flex:1}
+.step .ln1{font-weight:700}
+.step .ln2{font-size:10.5px;color:var(--mut);margin-top:1px}
+.step .dur{font-size:12px;font-weight:800;color:var(--ink);flex:0 0 auto}
+.zpill{display:inline-block;font-size:9px;font-weight:800;padding:1px 6px;border-radius:99px;letter-spacing:.04em;vertical-align:middle}
+
+.sess-actions{display:flex;gap:9px}
+.btn{flex:1;border:none;border-radius:12px;padding:12px;font-size:12.5px;font-weight:800;letter-spacing:.03em;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:inherit}
+.btn-go{background:linear-gradient(135deg,var(--amber),var(--amber2));color:#1a1206}
+.btn-go:active{transform:scale(.98)}
+.btn-done{background:var(--panel2);color:var(--mut);border:1px solid var(--line)}
+.btn-done.is{background:rgba(57,217,138,.14);color:var(--ok);border-color:rgba(57,217,138,.3)}
+
+/* ---------- PLAYER (fullscreen) ---------- */
+.player{position:fixed;inset:0;z-index:100;background:var(--bg);display:none;flex-direction:column;
+  padding:calc(env(safe-area-inset-top) + 8px) 20px calc(env(safe-area-inset-bottom) + 20px)}
+.player.on{display:flex}
+.pl-top{display:flex;align-items:center;justify-content:space-between}
+.pl-close{background:var(--panel);border:1px solid var(--line);color:var(--ink);width:40px;height:40px;border-radius:12px;font-size:20px;cursor:pointer}
+.pl-title{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--mut);text-align:center}
+.pl-title small{display:block;color:var(--dim);font-size:10px;margin-top:2px;letter-spacing:.06em}
+.pl-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;position:relative}
+.ring-wrap{position:relative;width:268px;height:268px;display:grid;place-items:center}
+.ring-wrap svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.phase-lbl{font-size:13px;font-weight:800;letter-spacing:.22em;text-transform:uppercase}
+.bigtime{font-size:74px;font-weight:800;line-height:1;letter-spacing:-.03em}
+.phase-sub{font-size:12px;color:var(--mut);font-weight:600;margin-top:2px;text-align:center;max-width:230px}
+.zline{margin-top:10px;font-size:12px;font-weight:800;letter-spacing:.04em;display:flex;align-items:center;gap:7px}
+.upnext{margin-top:18px;font-size:11px;color:var(--dim);letter-spacing:.06em;text-align:center}
+.upnext b{color:var(--mut)}
+.seg-track{display:flex;gap:3px;width:100%;max-width:320px;margin-top:16px;height:6px}
+.seg-track i{flex:1;border-radius:99px;background:var(--panel2)}
+.pl-controls{display:flex;gap:12px;align-items:center;justify-content:center;margin-top:6px}
+.pctrl{background:var(--panel);border:1px solid var(--line);color:var(--ink);height:56px;border-radius:16px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+.pctrl.wide{flex:1}
+.pctrl.main{flex:1.4;background:linear-gradient(135deg,var(--amber),var(--amber2));color:#1a1206;border:none;font-size:15px}
+.pctrl:active{transform:scale(.97)}
+.pl-total{text-align:center;font-size:11px;color:var(--dim);margin-top:14px;letter-spacing:.08em}
+.pl-total b{color:var(--mut)}
+
+/* install hint */
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 16px);transform:translateX(-50%) translateY(120%);
+  background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:13px 16px;display:flex;gap:12px;align-items:center;
+  z-index:200;transition:transform .4s cubic-bezier(.2,.9,.2,1);max-width:340px;width:calc(100% - 32px);box-shadow:0 12px 30px rgba(0,0,0,.5)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast .tx{flex:1;font-size:12px;line-height:1.4}
+.toast .tx b{font-weight:800}
+.toast button{background:var(--amber);color:#1a1206;border:none;border-radius:9px;padding:9px 12px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit}
+.toast .x{color:var(--dim);background:none;border:none;font-size:18px;padding:0 2px}
+
+footer{text-align:center;color:var(--dim);font-size:10.5px;letter-spacing:.08em;padding:8px 0 4px}
+.reset{background:none;border:none;color:var(--dim);font-size:10.5px;text-decoration:underline;cursor:pointer;font-family:inherit;margin-top:4px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="dot"><svg viewBox="0 0 24 24" fill="none"><path d="M5 19L11 7l3 5 2-3 3 10" stroke="#1a1206" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div>
+      <h1 class="cond">APEX RUN</h1>
+      <div class="sub">RECOMP · OBJECTIF 10 KM</div>
+    </div>
+  </div>
+  <div class="pbar"><i id="pfill"></i></div>
+  <div class="pmeta"><span><b id="pdone">0</b> / 24 séances</span><span id="pweek">Semaine 1 · Bloc 1</span></div>
+</header>
+
+<div class="refs">
+  <div class="ref"><div class="k">PROFIL</div><div class="v cond">1m84</div></div>
+  <div class="ref"><div class="k">POIDS</div><div class="v cond">82,5<small> kg</small></div></div>
+  <div class="ref"><div class="k">VMA</div><div class="v cond mono">11<small> km/h</small></div></div>
+  <div class="ref"><div class="k">FC MAX</div><div class="v cond mono">173<small> bpm</small></div></div>
+</div>
+
+<main id="app"></main>
+
+<footer>
+  APEX RUN · données stockées sur ton appareil
+  <br><button class="reset" id="reset">réinitialiser la progression</button>
+</footer>
+
+<!-- PLAYER -->
+<div class="player" id="player">
+  <div class="pl-top">
+    <button class="pl-close" id="plClose">✕</button>
+    <div class="pl-title" id="plTitle">SÉANCE<small>—</small></div>
+    <div style="width:40px"></div>
+  </div>
+  <div class="pl-stage">
+    <div class="ring-wrap">
+      <svg viewBox="0 0 268 268">
+        <circle cx="134" cy="134" r="120" fill="none" stroke="#1C232D" stroke-width="14"/>
+        <circle id="ring" cx="134" cy="134" r="120" fill="none" stroke="var(--amber)" stroke-width="14" stroke-linecap="round"
+          stroke-dasharray="753.98" stroke-dashoffset="753.98"/>
+      </svg>
+      <div style="text-align:center">
+        <div class="phase-lbl" id="phaseLbl">PRÊT</div>
+        <div class="bigtime mono" id="bigtime">00:00</div>
+        <div class="phase-sub" id="phaseSub">Appuie sur Démarrer</div>
+      </div>
+    </div>
+    <div class="zline" id="zline"></div>
+    <div class="seg-track" id="segTrack"></div>
+    <div class="upnext" id="upnext"></div>
+  </div>
+  <div class="pl-controls">
+    <button class="pctrl wide" id="plSkip">Passer ▸</button>
+    <button class="pctrl main" id="plPlay">▶ Démarrer</button>
+  </div>
+  <div class="pl-total" id="plTotal"></div>
+</div>
+
+<div class="toast" id="installToast">
+  <div class="tx"><b>Installer APEX RUN</b><br>Ajoute l'app à ton écran d'accueil pour un accès hors ligne.</div>
+  <button id="installBtn">Installer</button>
+  <button class="x" id="installX">✕</button>
+</div>
+
+<script src="program.js"></script>
+<script src="app.js"></script>
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html>
