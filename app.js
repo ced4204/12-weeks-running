@@ -13,6 +13,19 @@ function fmt(sec){ const m=Math.floor(sec/60), s=Math.round(sec%60); return `${S
 function totalDur(steps){ return steps.reduce((a,s)=>a+s.dur,0); }
 function totalLabel(steps){ const t=totalDur(steps); const m=Math.round(t/60); return `${m} min`; }
 
+/* ---- classification des segments ----
+   role marche : 'warmup' (1er segment) | 'cooldown' (dernier segment) | 'recovery'
+   isLastRun : true pour le dernier segment de course de la séance */
+function firstWalkIdx(steps){ return steps.findIndex(s=>s.type==='walk'); }
+function lastWalkIdx(steps){ for(let i=steps.length-1;i>=0;i--) if(steps[i].type==='walk') return i; return -1; }
+function lastRunIdx(steps){ for(let i=steps.length-1;i>=0;i--) if(steps[i].type==='run') return i; return -1; }
+function walkRole(steps,i){
+  if(i===firstWalkIdx(steps)) return 'warmup';
+  if(i===lastWalkIdx(steps) && lastWalkIdx(steps)!==firstWalkIdx(steps)) return 'cooldown';
+  return 'recovery';
+}
+const WALK_LABEL={warmup:{ln1:'Marche rapide',ln2:'Échauffement'},cooldown:{ln1:'Marche',ln2:'Retour au calme'},recovery:{ln1:'Marche',ln2:'Récupération active'}};
+
 /* ---------- RENDER ---------- */
 function render(){
   const app=document.getElementById('app');
@@ -74,13 +87,16 @@ function render(){
 function sessionHTML(w,kind,done){
   const s=w[kind]; const tag=kind==='iv'?'iv':'ef';
   let steps='';
-  s.steps.forEach(st=>{
+  s.steps.forEach((st,i)=>{
     const isRun=st.type==='run'; const z=isRun?ZN[st.z]:ZN.walk;
+    const wl=isRun?null:WALK_LABEL[walkRole(s.steps,i)];
+    const ln1=isRun?'Course':wl.ln1;
+    const ln2=isRun?`<span class="zpill" style="background:${z.col}22;color:${z.col}">${z.lbl}</span>`:wl.ln2;
     steps+=`<div class="step">
       <div class="bar" style="background:${z.col}"></div>
       <div class="body">
-        <div class="ln1">${isRun?'Course':'Marche'}</div>
-        <div class="ln2">${isRun?`<span class="zpill" style="background:${z.col}22;color:${z.col}">${z.lbl}</span>`:'récupération active'}</div>
+        <div class="ln1">${ln1}</div>
+        <div class="ln2">${ln2}</div>
       </div>
       <div class="dur mono">${fmt(st.dur)}</div>
     </div>`;
@@ -142,13 +158,15 @@ function paintSegTrack(){
 function paintPhase(){
   const st=P.steps[P.idx]; const isRun=st.type==='run';
   const z=isRun?ZN[st.z]:ZN.walk; const col=isRun?'var(--amber)':'var(--walk)';
-  document.getElementById('phaseLbl').textContent=isRun?'COURSE':'MARCHE';
+  const role=isRun?null:walkRole(P.steps,P.idx);
+  const phaseTxt=isRun?'COURSE':(role==='warmup'?'ÉCHAUFFEMENT':role==='cooldown'?'RETOUR AU CALME':'MARCHE');
+  document.getElementById('phaseLbl').textContent=phaseTxt;
   document.getElementById('phaseLbl').style.color=col;
   document.getElementById('bigtime').textContent=fmt(P.remain);
   document.getElementById('ring').style.stroke=col;
   const zl=document.getElementById('zline');
   if(isRun){zl.innerHTML=`<span style="width:9px;height:9px;border-radius:99px;background:${z.col};display:inline-block"></span> Cible <b>${z.lbl} BPM</b>`;zl.style.color=z.col;}
-  else{zl.innerHTML='Récupération active';zl.style.color='var(--mut)';}
+  else{const sub=role==='warmup'?'Marche rapide':role==='cooldown'?'Retour au calme':'Récupération active';zl.innerHTML=sub;zl.style.color='var(--mut)';}
   // up next
   const nx=P.steps[P.idx+1];
   document.getElementById('upnext').innerHTML=nx
@@ -182,9 +200,23 @@ function stopTick(){ P.running=false; clearInterval(P.timer); updatePlay(); }
 function nextSeg(auto){
   if(P.idx>=P.steps.length-1){ finishSession(); return; }
   P.idx++; P.remain=P.steps[P.idx].dur; P._lastBeep=null;
-  const isRun=P.steps[P.idx].type==='run';
-  if(auto){ if(isRun){beep(880,180,.7);setTimeout(()=>beep(1100,220,.7),200);} else {beep(440,300,.6);} vibrate(isRun?[120,60,120]:[200]);}
+  const st=P.steps[P.idx];
+  const isRun=st.type==='run';
+  const isLastRun=(P.idx===lastRunIdx(P.steps));
+  const isCooldown=(!isRun && walkRole(P.steps,P.idx)==='cooldown');
+  if(auto) segmentCue(isRun,isLastRun,isCooldown);
   paintPhase();
+}
+/* signal de début de segment.
+   - double bip neutre de transition, teinté course (aigu) / marche (grave)
+   - (A) dernier segment de course : mélodie descendante + vibration marquée
+   - (B) début du retour au calme : mélodie ascendante + vibration */
+function segmentCue(isRun,isLastRun,isCooldown){
+  if(isLastRun){ chimeLastEffort(); vibrate([200,90,200,90,200]); return; }
+  if(isCooldown){ chimeCooldown(); vibrate([300,120,300]); return; }
+  // bip de début standard : deux notes rapprochées, hauteur selon l'effort
+  if(isRun){ beep(880,140,.6); setTimeout(()=>beep(1100,180,.7),150); vibrate([120,60,120]); }
+  else { beep(523,150,.55); setTimeout(()=>beep(440,220,.55),160); vibrate([200]); }
 }
 function prevSeg(){ if(P.idx>0){P.idx--; P.remain=P.steps[P.idx].dur; P._lastBeep=null; paintPhase();} }
 
@@ -221,6 +253,12 @@ function beep(freq,ms,vol){
   }catch(e){}
 }
 function vibrate(p){ try{navigator.vibrate&&navigator.vibrate(p);}catch(e){} }
+// mélodie : suite de [freq, durée_ms, délai_ms]
+function chime(notes,vol){ notes.forEach(([f,ms,delay])=>setTimeout(()=>beep(f,ms,vol||.6),delay)); }
+// (A) dernier segment de course : descendante distinctive
+function chimeLastEffort(){ chime([[784,180,0],[659,180,190],[523,320,380]],.7); }
+// (B) début du retour au calme : ascendante douce
+function chimeCooldown(){ chime([[523,180,0],[659,180,190],[784,320,380]],.55); }
 
 /* controls */
 document.getElementById('plPlay').onclick=()=>{
