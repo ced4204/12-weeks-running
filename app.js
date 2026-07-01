@@ -117,17 +117,18 @@ function sessionHTML(w,kind,done){
 }
 
 /* ============ PLAYER ============ */
-let P={w:0,kind:'',steps:[],idx:0,remain:0,running:false,timer:null,segStart:0};
+let P={w:0,kind:'',steps:[],idx:0,remain:0,running:false,timer:null,notifTimer:null};
 
 function openPlayer(w,kind){
   const s=PROGRAM.weeks[w-1][kind];
-  P={w,kind,steps:s.steps,idx:0,remain:s.steps[0].dur,running:false,timer:null};
+  P={w,kind,steps:s.steps,idx:0,remain:s.steps[0].dur,running:false,timer:null,notifTimer:null};
   document.getElementById('plTitle').innerHTML=`SEMAINE ${w} · ${kind==='iv'?'INTERVALLES':'ENDURANCE'}<small>${s.label}</small>`;
   buildSegTrack();
   paintPhase(); updatePlay();
   document.getElementById('plTotal').innerHTML=`Durée totale <b>${totalLabel(s.steps)}</b> · ${s.steps.length} segments`;
   document.getElementById('player').classList.add('on');
   if('wakeLock' in navigator){requestWake();}
+  if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
 }
 function closePlayer(){
   stopTick(); releaseWake();
@@ -184,18 +185,37 @@ function ring(){
 
 function startTick(){
   P.running=true; updatePlay();
+  startAudioKeepalive();
+  scheduleSegNotif();
   let last=Date.now();
   P.timer=setInterval(()=>{
     const now=Date.now(); const dt=(now-last)/1000; last=now;
     P.remain-=dt;
-    if(P.remain<=0){ nextSeg(true); }
-    else { document.getElementById('bigtime').textContent=fmt(Math.ceil(P.remain)); ring(); }
+    if(P.remain<=0){
+      // fast-forward through all segments elapsed during background suspension
+      let advanced=false;
+      while(P.remain<=0){
+        if(P.idx>=P.steps.length-1){ finishSession(); return; }
+        P.idx++; P.remain+=P.steps[P.idx].dur; P._lastBeep=null; advanced=true;
+      }
+      if(advanced){
+        const st=P.steps[P.idx]; const isRun=st.type==='run';
+        segmentCue(isRun, P.idx===lastRunIdx(P.steps), !isRun&&walkRole(P.steps,P.idx)==='cooldown');
+        paintPhase(); scheduleSegNotif();
+      }
+      return;
+    }
+    document.getElementById('bigtime').textContent=fmt(Math.ceil(P.remain)); ring();
     // 3-2-1 beep
     const r=Math.ceil(P.remain);
     if(P.remain>0 && r<=3 && r!==P._lastBeep){ P._lastBeep=r; beep(660,90,.5); }
   },120);
 }
-function stopTick(){ P.running=false; clearInterval(P.timer); updatePlay(); }
+function stopTick(){
+  P.running=false; clearInterval(P.timer);
+  clearTimeout(P.notifTimer); P.notifTimer=null;
+  stopAudioKeepalive(); updatePlay();
+}
 
 function nextSeg(auto){
   if(P.idx>=P.steps.length-1){ finishSession(); return; }
@@ -206,6 +226,7 @@ function nextSeg(auto){
   const isCooldown=(!isRun && walkRole(P.steps,P.idx)==='cooldown');
   if(auto) segmentCue(isRun,isLastRun,isCooldown);
   paintPhase();
+  if(P.running) scheduleSegNotif();
 }
 /* signal de début de segment.
    - double bip neutre de transition, teinté course (aigu) / marche (grave)
@@ -221,6 +242,8 @@ function segmentCue(isRun,isLastRun,isCooldown){
 function prevSeg(){ if(P.idx>0){P.idx--; P.remain=P.steps[P.idx].dur; P._lastBeep=null; paintPhase();} }
 
 function finishSession(){
+  clearTimeout(P.notifTimer); P.notifTimer=null;
+  stopAudioKeepalive();
   stopTick();
   document.getElementById('phaseLbl').textContent='TERMINÉ';
   document.getElementById('phaseLbl').style.color='var(--ok)';
@@ -260,6 +283,40 @@ function chimeLastEffort(){ chime([[784,180,0],[659,180,190],[523,320,380]],.7);
 // (B) début du retour au calme : ascendante douce
 function chimeCooldown(){ chime([[523,180,0],[659,180,190],[784,320,380]],.55); }
 
+/* silent audio loop — signale au navigateur qu'il y a de l'audio actif,
+   réduit le throttling JS quand l'app passe en arrière-plan (écran allumé) */
+let keepAliveNode=null;
+function startAudioKeepalive(){
+  try{
+    actx=actx||new(window.AudioContext||window.webkitAudioContext)();
+    if(keepAliveNode) return;
+    const osc=actx.createOscillator(); const g=actx.createGain(); g.gain.value=0;
+    osc.connect(g); g.connect(actx.destination); osc.start(); keepAliveNode=osc;
+  }catch(e){}
+}
+function stopAudioKeepalive(){
+  try{keepAliveNode&&keepAliveNode.stop();}catch(e){} keepAliveNode=null;
+}
+
+/* notification de transition de segment via Service Worker.
+   Planifie un setTimeout pour la fin du segment courant ; quand JS reprend
+   après suspension (retour sur l'écran), le SW affiche la notif immédiatement. */
+function scheduleSegNotif(){
+  clearTimeout(P.notifTimer); P.notifTimer=null;
+  if(!('Notification' in window)||Notification.permission!=='granted') return;
+  const nx=P.steps[P.idx+1]; if(!nx) return; // dernier segment
+  const isNextRun=nx.type==='run';
+  const title=isNextRun?'▶ COURSE':'🚶 MARCHE';
+  const body=isNextRun
+    ?`${fmt(nx.dur)} · ${ZN[nx.z].lbl}`
+    :`${fmt(nx.dur)} · ${WALK_LABEL[walkRole(P.steps,P.idx+1)].ln2}`;
+  P.notifTimer=setTimeout(async()=>{
+    try{const reg=await navigator.serviceWorker.ready;
+      reg.active?.postMessage({type:'apex-notif',title,body,
+        vibrate:isNextRun?[200,80,200]:[300]});}catch(e){}
+  }, Math.max(0,P.remain)*1000);
+}
+
 /* controls */
 document.getElementById('plPlay').onclick=()=>{
   if(actx&&actx.state==='suspended')actx.resume();
@@ -290,5 +347,12 @@ document.getElementById('installX').onclick=()=>{
   document.getElementById('installToast').classList.remove('show');
   localStorage.setItem('apexrun.installDismissed','1');
 };
+
+/* resync notification quand l'app revient au premier plan pendant une séance */
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden||!P.running) return;
+  // laisser le premier tick corriger P.remain / P.idx avant de replanifier
+  setTimeout(scheduleSegNotif, 200);
+});
 
 render();
