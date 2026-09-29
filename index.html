@@ -89,6 +89,12 @@ main{padding:16px 14px 40px}
 .tag{font-size:9.5px;font-weight:800;letter-spacing:.08em;padding:3px 8px;border-radius:99px}
 .tag.iv{background:rgba(255,176,32,.15);color:var(--amber)}
 .tag.ef{background:rgba(61,169,252,.15);color:var(--walk)}
+.tag.race{background:rgba(255,107,91,.15);color:var(--z4)}
+.sess-note,.sess-obj{font-size:11.5px;color:var(--mut);line-height:1.45;margin-bottom:11px}
+.sess-obj{background:var(--panel2);border-radius:10px;padding:9px 11px}
+.sess-obj b{color:var(--ink);font-weight:800}
+.plan{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.plan-t{font-size:10px;color:var(--dim);letter-spacing:.12em;font-weight:800;text-transform:uppercase}
 
 .steps{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
 .step{display:flex;align-items:center;gap:11px;font-size:12.5px}
@@ -158,7 +164,7 @@ footer{text-align:center;color:var(--dim);font-size:10.5px;letter-spacing:.08em;
     </div>
   </div>
   <div class="pbar"><i id="pfill"></i></div>
-  <div class="pmeta"><span><b id="pdone">0</b> / 24 séances</span><span id="pweek">Semaine 1 · Bloc 1</span></div>
+  <div class="pmeta"><span><b id="pdone">0</b> / <span id="ptotal">28</span> séances</span><span id="pweek">Semaine 1 · Bloc 1</span></div>
 </header>
 
 <div class="refs">

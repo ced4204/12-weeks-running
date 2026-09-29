@@ -27,6 +27,9 @@ OPTION B — Servir depuis ton ordinateur (réseau local) :
 
 FONCTIONS :
 - Programme complet 12 semaines (3 blocs, 24 séances).
+- Bloc 04 · Affûtage 10 km (29 sept → 10 oct) : J-11 rappel allure,
+  J-6 régulation, J-4 activation, Jour J (échauffement + stratégie
+  négative split).
 - Lecteur de séance : chrono par segment, anneau de progression,
   cible de zone FC affichée, bips sonores 3-2-1 + vibration à chaque
   transition marche/course, écran maintenu allumé.

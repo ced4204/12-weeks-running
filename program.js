@@ -76,3 +76,75 @@ const PROGRAM = {
   ]
 };
 PROGRAM.ZONES = Z;
+
+/* ============ PROTOCOLE D'AFFÛTAGE 10 KM (29 sept → 10 oct) ============
+   Paramètres de contrôle : FCMax 173 · Z1 112-130 · Z2/3 130-156.
+   Un segment peut surcharger ses libellés : ln1 / ln2 (liste) et ph (lecteur). */
+Object.assign(Z,{
+  tz1:     {lbl:'Z1 · 112-130',          col:'var(--z1)'},
+  tz1low:  {lbl:'Z1 · 112-125',          col:'var(--z1)'},
+  tz3:     {lbl:'Z3 · 147-156',          col:'var(--z3)'},
+  stride:  {lbl:'Accélération progressive', col:'var(--z4)'},
+  race1:   {lbl:'Z2 haute · 130-142',    col:'var(--z2)'},
+  race2:   {lbl:'Z3 · 145-154',          col:'var(--z3)'},
+  race3:   {lbl:'155-165+',              col:'var(--z4)'}
+});
+const lbl=(step,ln1,ln2,ph)=>Object.assign(step,{ln1,ln2,ph});
+const Rs=(sec,z)=>({type:'run', dur:sec, z});
+
+PROGRAM.taper={
+  no:'04', title:'AFFÛTAGE 10 KM', weeks:'29 septembre → 10 octobre',
+  focus:"Paramètres de contrôle : FCMax 173 BPM · Zone 1 (112-130 BPM) · Zone 2/3 (130-156 BPM). Volume réduit, intensité conservée, zéro fatigue résiduelle le jour J.",
+  sessions:[
+    {id:'j11', tag:'J-11', day:'MARDI 29 SEPT', kind:'iv', name:'Rappel spécifique allure 10 km',
+     label:"3 × 1 000 m (ou 3 × 6 min) à l'allure cible 10 km · 2 min marche active",
+     objective:"Mémorisation neuromusculaire de l'allure sans accumulation d'acide lactique.",
+     steps:[
+       lbl(W(5),'Marche rapide','Échauffement','ÉCHAUFFEMENT'),
+       lbl(R(5,'tz1'),'Trot très léger',null,'TROT LÉGER'),
+       lbl(R(6,'tz3'),'Allure cible 10 km','1 000 m ou 6 min','ALLURE 10 KM'),
+       lbl(W(2),'Marche active','Récupération','RÉCUPÉRATION'),
+       lbl(R(6,'tz3'),'Allure cible 10 km','1 000 m ou 6 min','ALLURE 10 KM'),
+       lbl(W(2),'Marche active','Récupération','RÉCUPÉRATION'),
+       lbl(R(6,'tz3'),'Allure cible 10 km','1 000 m ou 6 min','ALLURE 10 KM'),
+       lbl(W(5),'Marche lente','Retour au calme','RETOUR AU CALME')
+     ]},
+    {id:'j6', tag:'J-6', day:'DIMANCHE 4 OCT', kind:'ef', name:'Dernière sortie de régulation',
+     label:'25 min course continue · Zone 1 stricte · volume réduit de moitié',
+     objective:"Éliminer l'acide urique et les tensions musculaires de la semaine, maintenir le flux sanguin vers les tendons sans puiser dans le glycogène. Volume réduit de moitié par rapport à la normale.",
+     steps:[
+       lbl(W(5),'Marche progressive','Échauffement','ÉCHAUFFEMENT'),
+       lbl(R(25,'tz1'),'Course continue','Zone 1 stricte','COURSE Z1'),
+       lbl(W(5),'Marche','Décélération','RETOUR AU CALME')
+     ]},
+    {id:'j4', tag:'J-4', day:'MARDI 6 OCT', kind:'iv', name:'Activation neuromusculaire pré-course',
+     label:'12 min trot très léger + 4 × 60 m en lignes droites progressives',
+     objective:"Réveiller la réactivité des fuseaux neuromusculaires et ouvrir la cage thoracique sans générer de fatigue résiduelle.",
+     note:"Lignes droites : accélération fluide sur le plat, relâchement des bras, axe neutre du poignet. Retour marché au point de départ.",
+     steps:[
+       lbl(W(5),'Marche','Échauffement','ÉCHAUFFEMENT'),
+       lbl(R(12,'tz1low'),'Trot très léger',null,'TROT LÉGER'),
+       lbl(Rs(15,'stride'),'Ligne droite 60 m','Relâchement des bras','LIGNE DROITE 60 M'),
+       lbl(W(1),'Retour marché','Au point de départ','RETOUR MARCHÉ'),
+       lbl(Rs(15,'stride'),'Ligne droite 60 m','Relâchement des bras','LIGNE DROITE 60 M'),
+       lbl(W(1),'Retour marché','Au point de départ','RETOUR MARCHÉ'),
+       lbl(Rs(15,'stride'),'Ligne droite 60 m','Relâchement des bras','LIGNE DROITE 60 M'),
+       lbl(W(1),'Retour marché','Au point de départ','RETOUR MARCHÉ'),
+       lbl(Rs(15,'stride'),'Ligne droite 60 m','Relâchement des bras','LIGNE DROITE 60 M'),
+       lbl(W(3),'Marche lente','Retour au calme','RETOUR AU CALME')
+     ]},
+    {id:'race', tag:'JOUR J', day:'SAMEDI 10 OCT', kind:'race', name:'Course officielle 10 km',
+     label:'Échauffement 15 min avant le départ · stratégie négative split',
+     objective:"Zéro fatigue avant le coup de feu. Départ contrôlé, stabilisation, puis exploitation totale du réservoir.",
+     steps:[
+       lbl(W(5),'Marche rapide','Échauffement','ÉCHAUFFEMENT'),
+       lbl(R(3,'tz1'),'Trot léger',null,'TROT LÉGER'),
+       lbl(W(2),'Mobilisations articulaires','Douces · zéro fatigue','MOBILISATIONS')
+     ],
+     plan:[
+       {km:'Km 0 → 3',  z:'race1', txt:'Démarrage contrôlé. Ne te laisse pas emporter par le peloton.'},
+       {km:'Km 3 → 7',  z:'race2', txt:"Stabilisation à l'allure cible. Respiration régulière, foulée économique."},
+       {km:'Km 7 → 10', z:'race3', txt:'Bascule mentale, exploitation totale du réservoir. Maintien ou accélération progressive jusqu\'à la ligne.'}
+     ]}
+  ]
+};
